@@ -36,6 +36,7 @@ enum
 void
 set_point(Mat_<double> & frame, int point_num, double x, double y)
 {
+//    cout << x << ", " << y << endl;
     frame(0, point_num) = x;
     frame(1, point_num) = y;
 }
@@ -202,11 +203,11 @@ void show_synth_points(Mat & points)
 #define Z_DIST 20
 
 static void
-synth(float yrot, Mat & imagePoints)
+synth(float yrot, float t, Mat & imagePoints)
 {
     vector<Point3f> points;
 
-    points.push_back(Point3f(0, 0, Z_DIST-5));
+    points.push_back(Point3f(0, 0, Z_DIST-10));
     points.push_back(Point3f(0, 5, Z_DIST-5));
     points.push_back(Point3f(5, 0, Z_DIST-5));
     points.push_back(Point3f(0, -5, Z_DIST-5));
@@ -224,8 +225,16 @@ synth(float yrot, Mat & imagePoints)
          points.push_back(Point3f(-5, (float)i, Z_DIST));
     }
 
+    // for (int i = 0; i < points.size(); i += 1)
+    // {
+    //     auto p = points[i];
+    //     cout << p.x << " " << p.y << " " << p.z << endl;
+    // }
+
+    // cout << "yrot " << yrot << " t " << t << endl;
+
     Mat rvec = (Mat_<float>(3,1) << 0, yrot, 0);
-    Mat tvec = (Mat_<float>(3,1) << 0, 0, 0);
+    Mat tvec = (Mat_<float>(3,1) << t, 0, 0);
 
     Matx33d K = Matx33d(500, 0, 500,
                         0, 500, 500,
@@ -234,25 +243,28 @@ synth(float yrot, Mat & imagePoints)
     Mat dist;
 
     projectPoints(points, rvec, tvec, K, noArray(), imagePoints);
-    show_synth_points(imagePoints);
+//    show_synth_points(imagePoints);
 }
 
 void
 init_synth_points(vector<Mat> & points2d)
 {
-    for (int i = -6; i <= 6; i += 1)
+    for (int i = -6;
+         i < -4; //i <= 6;
+         i += 1)
     {
         Mat imagePoints;
 
         auto yr = ((float)i) / 30;
-        synth(yr, imagePoints);
+        auto t = ((float)i) / 10;
+        synth(yr, t, imagePoints);
 
 
         Mat_<double> frame(2, imagePoints.rows);
         for (int j = 0; j < imagePoints.rows; j += 1)
         {
-            cout << imagePoints.at<float>(j, 0) << " " <<
-                imagePoints.at<float>(j, 1) << endl;
+//            cout << imagePoints.at<float>(j, 0) << " " <<
+//                imagePoints.at<float>(j, 1) << endl;
             set_point(frame, j,
                       imagePoints.at<float>(j, 0),
                       imagePoints.at<float>(j, 1));
@@ -261,6 +273,58 @@ init_synth_points(vector<Mat> & points2d)
         points2d.push_back(Mat(frame));
 
 //cout << imagePoints << endl;
+    }
+}
+
+const Matx33d K = Matx33d(500, 0, 500,
+                          0, 500, 500,
+                          0, 0,  1);
+
+void
+triangulate(vector<Mat> & points2d)
+{
+    Mat P1, P2;
+    Mat R;
+    Mat rvec;
+    Mat t = (Mat_<double>(3,1) << -0.6, 0, 0);
+
+    rvec = (Mat_<double>(3,1) << 0, -0.2, 0);
+    Rodrigues(rvec, R);
+    projectionFromKRt(K, R, t, P1);
+
+    rvec = (Mat_<double>(3,1) << 0, -0.166667, 0);
+    Rodrigues(rvec, R);
+    t = (Mat_<double>(3,1) << -0.5, 0, 0);
+    projectionFromKRt(K, R, t, P2);
+
+    cout << "P1 " << P1 << endl;
+    cout << "P2 " << P2 << endl;
+    vector<Mat> Ps;
+    Ps.push_back(P1);
+    Ps.push_back(P2);
+
+    // vector<Mat> points2d;
+
+    // Mat x = (Mat_<double>(2,5) <<
+    //     398.645, 398.645, 561.178, 398.645, 212.556,
+    //     500,     670.056, 500,     329.944, 500);
+    // cout << x << endl;
+    // points2d.push_back(x);
+
+    // x = (Mat_<double>(2,5) <<
+    //     415.886, 415.886, 578.17,  415.886, 234.322,
+    //     500,     669.009, 500,     330.991, 500);
+    // cout << x << endl;
+    // points2d.push_back(x);
+
+    Mat points3d;
+    triangulatePoints(points2d, Ps, points3d);
+    cout << points3d.cols << endl;
+    for (int i = 0; i < points3d.cols; i += 1)
+    {
+        cout << points3d.at<double>(0, i) << " "
+             << points3d.at<double>(1, i) << " "
+             << points3d.at<double>(2, i) << endl;
     }
 }
 
@@ -275,27 +339,28 @@ main()
 
 //    init_points(points2d);
     init_synth_points(points2d);
+    triangulate(points2d);
 
-    Matx33d K = Matx33d(500, 0, 500,
-                        0, 500, 500,
-                        0, 0,  1);
-    reconstruct(InputArrayOfArrays(points2d), Rs, Ts, K, points3d_estimated, true);
+    // Matx33d K = Matx33d(500, 0, 500,
+    //                     0, 500, 500,
+    //                     0, 0,  1);
+    // reconstruct(InputArrayOfArrays(points2d), Rs, Ts, K, points3d_estimated, true);
 
 
-    for (int i = 0; i < points3d_estimated.size(); i++)
-    {
-        auto p = points3d_estimated[i];
+    // for (int i = 0; i < points3d_estimated.size(); i++)
+    // {
+    //     auto p = points3d_estimated[i];
 
-        for (int j = 0; j < 3; j++)
-        {
-            std::cout << std::fixed;
-            std::cout << std::setprecision(10);
-            cout << p.row(j).at<double>(0) << " ";
-        }
-        cout << endl;
-    }
+    //     for (int j = 0; j < 3; j++)
+    //     {
+    //         std::cout << std::fixed;
+    //         std::cout << std::setprecision(10);
+    //         cout << p.row(j).at<double>(0) << " ";
+    //     }
+    //     cout << endl;
+    // }
 
-    cout << K << endl;
+    // cout << K << endl;
 
     return 0;
 }
