@@ -99,13 +99,11 @@ show_points(string fname, Mat_<double> & points)
     }
 
     Mat tmp;
-//    Mat tmp = Mat(1200, 1200, CV_8UC3, pixels);
     resize(image, tmp, Size(), .8, .8);
     namedWindow( "Display window", WINDOW_AUTOSIZE );
     imshow( "Display window", tmp );
 
     waitKey(0);
-
 }
 
 void
@@ -281,6 +279,34 @@ const Matx33d K = Matx33d(500, 0, 500,
                           0, 0,  1);
 
 void
+show_point_cloud(Mat & points3d)
+{
+//    Mat cloud(3, points3d.cols, CV_64FC3);
+    Mat cloud(points3d.cols, 1, CV_64FC3);
+
+    for (int i = 0; i < points3d.cols; i += 1)
+    {
+        auto x = points3d.at<double>(0, i);
+        auto y = points3d.at<double>(1, i);
+        auto z = points3d.at<double>(2, i);
+
+        cout << x << " "
+             << y << " "
+             << z << endl;
+
+        cloud.at<double>(i, 0) = x;
+        cloud.at<double>(i, 1) = y;
+        cloud.at<double>(i, 2) = z;
+    }
+
+    cv::viz::Viz3d myWindow("Viz Demo");
+    auto cloud_widget = cv::viz::WCloud(cloud);
+    myWindow.showWidget( "Depth", cloud_widget );
+
+    myWindow.spin();
+}
+
+void
 triangulate(vector<Mat> & points2d)
 {
     Mat P1, P2;
@@ -303,34 +329,16 @@ triangulate(vector<Mat> & points2d)
     Ps.push_back(P1);
     Ps.push_back(P2);
 
-    // vector<Mat> points2d;
-
-    // Mat x = (Mat_<double>(2,5) <<
-    //     398.645, 398.645, 561.178, 398.645, 212.556,
-    //     500,     670.056, 500,     329.944, 500);
-    // cout << x << endl;
-    // points2d.push_back(x);
-
-    // x = (Mat_<double>(2,5) <<
-    //     415.886, 415.886, 578.17,  415.886, 234.322,
-    //     500,     669.009, 500,     330.991, 500);
-    // cout << x << endl;
-    // points2d.push_back(x);
-
     Mat points3d;
     triangulatePoints(points2d, Ps, points3d);
-    cout << points3d.cols << endl;
-    for (int i = 0; i < points3d.cols; i += 1)
-    {
-        cout << points3d.at<double>(0, i) << " "
-             << points3d.at<double>(1, i) << " "
-             << points3d.at<double>(2, i) << endl;
-    }
+
+    show_point_cloud(points3d);
 }
 
 int
 main()
 {
+
     vector<Mat> points2d;
     vector<Mat> Rs;
     vector<Mat> Ts;
