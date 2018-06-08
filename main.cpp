@@ -9,6 +9,7 @@
 #include <opencv2/core.hpp>
 #include "opencv2/imgproc.hpp"
 #include <opencv2/highgui/highgui.hpp>
+#include <stdlib.h>
 
 
 using namespace std;
@@ -18,6 +19,12 @@ using namespace cv::sfm;
 #define F   664.383695213819
 #define CX  609.7365486001763
 #define CY  600.5922443696466
+
+
+const Matx33d K = Matx33d(500, 0, 500,
+                          0, 500, 500,
+                          0, 0,  1);
+
 
 enum
 {
@@ -179,6 +186,8 @@ show_points("img20", frame);
     points2d.push_back(Mat(frame));
 }
 
+#define IMG_WIN "synth points"
+
 void show_synth_points(Mat & points)
 {
     Mat img(1000, 1000, CV_8UC3, Scalar(256, 256, 256));
@@ -192,35 +201,52 @@ void show_synth_points(Mat & points)
         rectangle(img, Point(x-1, y-1), Point(x+1, y+1), col);
     }
 
-    namedWindow( "Display window", WINDOW_AUTOSIZE );
-    imshow( "Display window", img );
-
+    namedWindow(IMG_WIN, WINDOW_AUTOSIZE );
+    imshow(IMG_WIN, img );
     waitKey(0);
+//    destroyWindow(IMG_WIN);
 }
 
 #define Z_DIST 20
 
 static void
-synth(float yrot, float t, Mat & imagePoints)
+rt_vects(int i, Mat & rvec, Mat & tvec)
+{
+    auto yrot = ((float)i) / 4;
+    auto t = ((float)i) / 3;
+
+    rvec = (Mat_<double>(3,1) << 0, yrot, 0);
+    tvec = (Mat_<double>(3,1) << t, 0, 0);
+
+    // cout << " i " << i << endl
+    //      << " rvec " << rvec << endl
+    //      << " tvec " << tvec << endl;
+}
+
+static void
+synth(int i, Mat & imagePoints)
 {
     vector<Point3f> points;
 
-    points.push_back(Point3f(0, 0, Z_DIST-10));
-    points.push_back(Point3f(0, 5, Z_DIST-5));
-    points.push_back(Point3f(5, 0, Z_DIST-5));
-    points.push_back(Point3f(0, -5, Z_DIST-5));
-    points.push_back(Point3f(-5, 0, Z_DIST-5));
-
-    for (int i = -5; i <= 5; i += 1)
+    for (int j = 0; j <6; j += 3)
     {
-         points.push_back(Point3f((float)i, 5, Z_DIST));
-         points.push_back(Point3f((float)i, -5, Z_DIST));
-    }
+        points.push_back(Point3f(0, 0, j+Z_DIST-10));
+        points.push_back(Point3f(0, 5, j+Z_DIST-5));
+        points.push_back(Point3f(5, 0, j+Z_DIST-5));
+        points.push_back(Point3f(0, -5, j+Z_DIST-5));
+        points.push_back(Point3f(-5, 0, j+Z_DIST-5));
 
-    for (int i = -4; i <= 4; i += 1)
-    {
-         points.push_back(Point3f(5, (float)i, Z_DIST));
-         points.push_back(Point3f(-5, (float)i, Z_DIST));
+        for (int i = -5; i <= 5; i += 1)
+        {
+            points.push_back(Point3f((float)i, 5, j+Z_DIST));
+            points.push_back(Point3f((float)i, -5,j+Z_DIST));
+        }
+
+        for (int i = -4; i <= 4; i += 1)
+        {
+            points.push_back(Point3f(5, (float)i, j+Z_DIST));
+            points.push_back(Point3f(-5, (float)i, j+Z_DIST));
+        }
     }
 
     // for (int i = 0; i < points.size(); i += 1)
@@ -231,31 +257,27 @@ synth(float yrot, float t, Mat & imagePoints)
 
     // cout << "yrot " << yrot << " t " << t << endl;
 
-    Mat rvec = (Mat_<float>(3,1) << 0, yrot, 0);
-    Mat tvec = (Mat_<float>(3,1) << t, 0, 0);
-
-    Matx33d K = Matx33d(500, 0, 500,
-                        0, 500, 500,
-                        0, 0,  1);
+    Mat rvec, tvec;
+    rt_vects(i, rvec, tvec);
 
     Mat dist;
 
     projectPoints(points, rvec, tvec, K, noArray(), imagePoints);
-//    show_synth_points(imagePoints);
+    show_synth_points(imagePoints);
 }
 
 void
 init_synth_points(vector<Mat> & points2d)
 {
-    for (int i = -6;
-         i < -4; //i <= 6;
+    for (int i = 0;
+         i < 2; //i <= 6;
          i += 1)
     {
         Mat imagePoints;
 
-        auto yr = ((float)i) / 30;
-        auto t = ((float)i) / 10;
-        synth(yr, t, imagePoints);
+        // auto yr = ((float)i) / 4;
+        // auto t = ((float)i) / 3;
+        synth(i, imagePoints);
 
 
         Mat_<double> frame(2, imagePoints.rows);
@@ -274,10 +296,6 @@ init_synth_points(vector<Mat> & points2d)
     }
 }
 
-const Matx33d K = Matx33d(500, 0, 500,
-                          0, 500, 500,
-                          0, 0,  1);
-
 void
 show_point_cloud(Mat & points3d)
 {
@@ -290,9 +308,9 @@ show_point_cloud(Mat & points3d)
         auto y = points3d.at<double>(1, i);
         auto z = points3d.at<double>(2, i);
 
-        cout << x << " "
-             << y << " "
-             << z << endl;
+        // cout << x << " "
+        //      << y << " "
+        //      << z << endl;
 
         cloud.at<double>(i, 0) = x;
         cloud.at<double>(i, 1) = y;
@@ -309,25 +327,59 @@ show_point_cloud(Mat & points3d)
 void
 triangulate(vector<Mat> & points2d)
 {
-    Mat P1, P2;
+    Mat mask;
+    Mat P1, P2, P3;
     Mat R;
     Mat rvec;
-    Mat t = (Mat_<double>(3,1) << -0.6, 0, 0);
+    Mat tvec;
 
-    rvec = (Mat_<double>(3,1) << 0, -0.2, 0);
+    /* projection matrix P1 */
+    rt_vects(0, rvec, tvec);
     Rodrigues(rvec, R);
-    projectionFromKRt(K, R, t, P1);
+    projectionFromKRt(K, R, tvec, P1);
 
-    rvec = (Mat_<double>(3,1) << 0, -0.166667, 0);
-    Rodrigues(rvec, R);
-    t = (Mat_<double>(3,1) << -0.5, 0, 0);
-    projectionFromKRt(K, R, t, P2);
+    // /* projection matrix P2 */
+    // rt_vects(1, rvec, tvec);
+    // Rodrigues(rvec, R);
+    // projectionFromKRt(K, R, tvec, P2);
+
+    /* P2x from matches */
+    auto pp = Point2d(500, 500);
+    Mat E = findEssentialMat(points2d[0].t(), points2d[1].t(),
+                             500, pp, RANSAC, 0.999, 0.5, mask);
+    Mat local_R, local_t;
+    recoverPose(E, points2d[0].t(), points2d[1].t(), local_R, local_t, 500, pp, mask);
+    cout << "E " << E << endl;
+    cout << "local_R\n" << local_R << "\n local_t\n" << local_t << endl;
+    cout << "R\n" << R << endl;
+
+    Rodrigues(local_R, rvec);
+    cout << "rvec" << rvec << endl;
+
+    Mat P2x;
+    projectionFromKRt(K, local_R, local_t, P2x);
+
+//     /* P3x from matches */
+// cout << "------------- P3x ---------------\n";
+//     E = findEssentialMat(points2d[2].t(), points2d[0].t(),
+//                          500, pp, RANSAC, 0.999, 1.0, mask);
+
+//     recoverPose(E, points2d[2].t(), points2d[0].t(), local_R, local_t, 500, pp, mask);
+//     cout << "E " << E << endl;
+//     cout << "local_R\n" << local_R << "\n local_t\n" << local_t * 2 << endl;
+//     cout << "R\n" << R << endl;
+
+//     Mat P3x;
+//     projectionFromKRt(K, local_R, local_t * 2, P3x);
 
     cout << "P1 " << P1 << endl;
     cout << "P2 " << P2 << endl;
+    cout << "P2x " << P2x << endl;
+//    cout << "P3x " << P3x << endl;
     vector<Mat> Ps;
     Ps.push_back(P1);
-    Ps.push_back(P2);
+    Ps.push_back(P2x);
+//    Ps.push_back(P3x);
 
     Mat points3d;
     triangulatePoints(points2d, Ps, points3d);
@@ -338,12 +390,10 @@ triangulate(vector<Mat> & points2d)
 int
 main()
 {
-
     vector<Mat> points2d;
     vector<Mat> Rs;
     vector<Mat> Ts;
     vector<Mat> points3d_estimated;
-
 
 //    init_points(points2d);
     init_synth_points(points2d);
