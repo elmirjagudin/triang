@@ -16,13 +16,38 @@ using namespace std;
 using namespace cv;
 using namespace cv::sfm;
 
-#define F   664.383695213819
-#define CX  609.7365486001763
-#define CY  600.5922443696466
+/* camera rig */
+#define FX  668.0149082545821
+#define FY  667.7009161134772
+#define CX  612.5079400457761
+#define CY  607.8048501338819
+//LEFT:
+//[664.3603430180929, 0, 615.4154619627029;
+// 0, 664.3603430180929, 600.607663161244;
+// 0, 0, 1]
+
+//RIGHT:
+//[668.0149082545821, 0, 612.5079400457761;
+// 0, 667.7009161134772, 607.8048501338819;
+// 0, 0, 1]
+
+// #define F   655.899779
+// #define CX  657.042298
+// #define CY  614.458172
 
 
-const Matx33d K = Matx33d(500, 0, 500,
-                          0, 500, 500,
+// #define F   664.383695213819
+// #define CX  609.7365486001763
+// #define CY  600.5922443696466
+
+/* synthetic camera */
+// #define F   500
+// #define CX  500
+// #define CY  500
+
+
+const Matx33d K = Matx33d(FX, 0, CX,
+                          0, FY, CY,
                           0, 0,  1);
 
 
@@ -151,39 +176,40 @@ show_points("img0", frame);
 show_points("img12", frame);
     points2d.push_back(Mat(frame));
 
-    /* img16.png */
-    frame = Mat_<double>(2, NUM_POINTS);
-    set_point(frame, B1, 585,  658);
 
-    set_point(frame, C1, 220,  675);
-    set_point(frame, C2, 420,  614);
-    set_point(frame, C3, 867,  704);
-    set_point(frame, C4, 916,  856);
+//     /* img16.png */
+//     frame = Mat_<double>(2, NUM_POINTS);
+//     set_point(frame, B1, 585,  658);
 
-    set_point(frame, M1, 411,  987);
-    set_point(frame, M2, 555,  948);
-    set_point(frame, M3, 624, 1074);
-    set_point(frame, M4, 451, 1143);
+//     set_point(frame, C1, 220,  675);
+//     set_point(frame, C2, 420,  614);
+//     set_point(frame, C3, 867,  704);
+//     set_point(frame, C4, 916,  856);
 
-show_points("img16", frame);
-    points2d.push_back(Mat(frame));
+//     set_point(frame, M1, 411,  987);
+//     set_point(frame, M2, 555,  948);
+//     set_point(frame, M3, 624, 1074);
+//     set_point(frame, M4, 451, 1143);
 
-    /* img20.png */
-    frame = Mat_<double>(2, NUM_POINTS);
-    set_point(frame, B1, 671,  666);
+// show_points("img16", frame);
+//     points2d.push_back(Mat(frame));
 
-    set_point(frame, C1, 325,  674);
-    set_point(frame, C2, 508,  620);
-    set_point(frame, C3, 969,  721);
-    set_point(frame, C4, 1029, 891);
+//     /* img20.png */
+//     frame = Mat_<double>(2, NUM_POINTS);
+//     set_point(frame, B1, 671,  666);
 
-    set_point(frame, M1, 494,  984);
-    set_point(frame, M2, 636,  957);
-    set_point(frame, M3, 705, 1094);
-    set_point(frame, M4, 532, 1142);
+//     set_point(frame, C1, 325,  674);
+//     set_point(frame, C2, 508,  620);
+//     set_point(frame, C3, 969,  721);
+//     set_point(frame, C4, 1029, 891);
 
-show_points("img20", frame);
-    points2d.push_back(Mat(frame));
+//     set_point(frame, M1, 494,  984);
+//     set_point(frame, M2, 636,  957);
+//     set_point(frame, M3, 705, 1094);
+//     set_point(frame, M4, 532, 1142);
+
+// show_points("img20", frame);
+//     points2d.push_back(Mat(frame));
 }
 
 #define IMG_WIN "synth points"
@@ -218,9 +244,9 @@ rt_vects(int i, Mat & rvec, Mat & tvec)
     rvec = (Mat_<double>(3,1) << 0, yrot, 0);
     tvec = (Mat_<double>(3,1) << t, 0, 0);
 
-    // cout << " i " << i << endl
-    //      << " rvec " << rvec << endl
-    //      << " tvec " << tvec << endl;
+    cout << " i " << i << endl
+         << " rvec " << rvec << endl
+         << " tvec " << tvec << endl;
 }
 
 static void
@@ -228,13 +254,13 @@ synth(int i, Mat & imagePoints)
 {
     vector<Point3f> points;
 
-    for (int j = 0; j <6; j += 3)
+    for (int j = 0; j < 6; j += 3)
     {
-        points.push_back(Point3f(0, 0, j+Z_DIST-10));
-        points.push_back(Point3f(0, 5, j+Z_DIST-5));
-        points.push_back(Point3f(5, 0, j+Z_DIST-5));
-        points.push_back(Point3f(0, -5, j+Z_DIST-5));
-        points.push_back(Point3f(-5, 0, j+Z_DIST-5));
+        // points.push_back(Point3f(0, 0, j+Z_DIST-10));
+        // points.push_back(Point3f(0, 5, j+Z_DIST-5));
+        // points.push_back(Point3f(5, 0, j+Z_DIST-5));
+        // points.push_back(Point3f(0, -5, j+Z_DIST-5));
+        // points.push_back(Point3f(-5, 0, j+Z_DIST-5));
 
         for (int i = -5; i <= 5; i += 1)
         {
@@ -262,16 +288,22 @@ synth(int i, Mat & imagePoints)
 
     Mat dist;
 
-    projectPoints(points, rvec, tvec, K, noArray(), imagePoints);
+    vector<Point3f> sliced_points;
+    for (int i = 0; i < 40; i += 1)
+    {
+        sliced_points.push_back(points[i]);
+    }
+
+    projectPoints(sliced_points, rvec, tvec, K, noArray(), imagePoints);
     show_synth_points(imagePoints);
 }
 
 void
 init_synth_points(vector<Mat> & points2d)
 {
-    for (int i = 0;
-         i < 2; //i <= 6;
-         i += 1)
+    for (int i = -1;
+         i <= 1; //i <= 6;
+         i += 2)
     {
         Mat imagePoints;
 
@@ -338,17 +370,17 @@ triangulate(vector<Mat> & points2d)
     Rodrigues(rvec, R);
     projectionFromKRt(K, R, tvec, P1);
 
-    // /* projection matrix P2 */
-    // rt_vects(1, rvec, tvec);
-    // Rodrigues(rvec, R);
-    // projectionFromKRt(K, R, tvec, P2);
+    /* projection matrix P2 */
+    rt_vects(1, rvec, tvec);
+    Rodrigues(rvec, R);
+    projectionFromKRt(K, R, tvec, P2);
 
     /* P2x from matches */
-    auto pp = Point2d(500, 500);
+    auto pp = Point2d(CX, CY);
     Mat E = findEssentialMat(points2d[0].t(), points2d[1].t(),
-                             500, pp, RANSAC, 0.999, 0.5, mask);
+                             FX, pp, RANSAC, 0.999, 0.5, mask);
     Mat local_R, local_t;
-    recoverPose(E, points2d[0].t(), points2d[1].t(), local_R, local_t, 500, pp, mask);
+    recoverPose(E, points2d[0].t(), points2d[1].t(), local_R, local_t, FX, pp, mask);
     cout << "E " << E << endl;
     cout << "local_R\n" << local_R << "\n local_t\n" << local_t << endl;
     cout << "R\n" << R << endl;
