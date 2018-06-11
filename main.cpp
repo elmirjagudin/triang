@@ -11,49 +11,16 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <stdlib.h>
 
+#include "common.h"
+
+#include "match_pts.h"
 #include "load_pts.h"
+
 
 
 using namespace std;
 using namespace cv;
 using namespace cv::sfm;
-
-
-/* camera rig */
-//LEFT:
-#define FX  664.3603430180929
-#define FY  664.3603430180929
-#define CX  600.4154619627029
-#define CY  600.607663161244
-
-//[664.3603430180929, 0, 615.4154619627029;
-// 0, 664.3603430180929, 600.607663161244;
-// 0, 0, 1]
-
-//RIGHT:
-// #define FX  668.0149082545821
-// #define FY  664.3603430180929
-// #define CX  612.5079400457761
-// #define CY  607.8048501338819
-
-//[668.0149082545821, 0, 612.5079400457761;
-// 0, 664.3603430180929, 607.8048501338819;
-// 0, 0, 1]
-
-// #define F   655.899779
-// #define CX  657.042298
-// #define CY  614.458172
-
-
-// #define F   664.383695213819
-// #define CX  609.7365486001763
-// #define CY  600.5922443696466
-
-/* synthetic camera */
-// #define F   500
-// #define CX  500
-// #define CY  500
-
 
 const Matx33d K = Matx33d(FX, 0, CX,
                           0, FY, CY,
@@ -110,12 +77,6 @@ point_name(int num)
     }
 }
 
-string image_path(string name)
-{
-    return
-       "/home/boris/Desktop/RectifiedImgs/CameraRig/cb0/" + name + ".png";
-}
-
 void
 show_points(string fname, Mat_<double> & points)
 {
@@ -150,60 +111,6 @@ show_points(string fname, Mat_<double> & points)
     imshow( "Display window", tmp );
 
     waitKey(0);
-}
-
-static void
-get_keypoints(Mat & frame, vector<KeyPoint> & keypoints, Mat & descriptors)
-{
-    static auto orb = ORB::create();
-
-    orb->detectAndCompute(_InputArray(frame), cv::noArray(), keypoints, descriptors);
-}
-
-void
-match_points(vector<Mat> &points2d)
-{
-    auto orb = ORB::create(2000);
-    Mat image0, image20;
-    vector<KeyPoint> keypoints0, keypoints20;
-    Mat descriptors0, descriptors20;
-
-    image0 = imread(image_path("img75"),
-                    CV_LOAD_IMAGE_COLOR);
-
-    image20 = imread(image_path("img112"),
-                     CV_LOAD_IMAGE_COLOR);
-
-    get_keypoints(image0, keypoints0, descriptors0);
-    get_keypoints(image20, keypoints20, descriptors20);
-
-    static auto matcher = BFMatcher(NORM_HAMMING, true);
-    vector<DMatch> matches;
-                  /* query */   /* train */
-    matcher.match(descriptors0, descriptors20, matches);
-
-    // Mat img_matches;
-    // drawMatches(image0, keypoints0,
-    //             image20, keypoints20,
-    //             matches, img_matches);
-
-    // namedWindow("matches", 1);
-    // imshow("matches", img_matches);
-    // waitKey(0);
-
-    auto pts0 = Mat_<double>(2, matches.size());
-    auto pts20 = Mat_<double>(2, matches.size());
-    for (int i = 0; i < matches.size(); i += 1)
-    {
-        auto match = matches[i];
-        auto pt = keypoints0[match.queryIdx].pt;
-        set_point(pts0, i, pt.x, pt.y);
-
-        pt = keypoints20[match.trainIdx].pt;
-        set_point(pts20, i, pt.x, pt.y);
-    }
-    points2d.push_back(pts0);
-    points2d.push_back(pts20);
 }
 
 void
@@ -425,14 +332,6 @@ void filter_outliers(vector<Mat> & points2d, Mat & mask)
     Mat left = Mat_<double>(2, 0);
     Mat right = Mat_<double>(2, 0);
 
-    cout << points2d[0] << endl;
-    cout << points2d[1] << endl;
-
-//    hconcat(left, points2d[0].col(0), left);
-//    hconcat(left, points2d[0].col(3), left);
-
-
-
     int inliers = 0;
     for (int i = 0; i < mask.rows; i += 1)
     {
@@ -466,20 +365,20 @@ triangulate(vector<Mat> & points2d)
     Rodrigues(rvec, R);
     projectionFromKRt(K, R, tvec, P1);
 
-    /* projection matrix P2 */
-    rt_vects(1, rvec, tvec);
-    Rodrigues(rvec, R);
-    projectionFromKRt(K, R, tvec, P2);
+    // /* projection matrix P2 */
+    // rt_vects(1, rvec, tvec);
+    // Rodrigues(rvec, R);
+    // projectionFromKRt(K, R, tvec, P2);
 
     /* P2x from matches */
     auto pp = Point2d(CX, CY);
-    Mat E = findEssentialMat(points2d[0].t(), points2d[1].t(),
+    Mat E = findEssentialMat(points2d[1].t(), points2d[0].t(),
                              FX, pp, RANSAC, 0.999, 0.5, mask);
 
     filter_outliers(points2d, mask);
 
     Mat local_R, local_t;
-    recoverPose(E, points2d[0].t(), points2d[1].t(), local_R, local_t, FX, pp);
+    recoverPose(E, points2d[1].t(), points2d[0].t(), local_R, local_t, FX, pp);
     cout << "E " << E << endl;
     cout << "local_R\n" << local_R << "\n local_t\n" << local_t << endl;
     cout << "R\n" << R << endl;
@@ -510,7 +409,10 @@ triangulate(vector<Mat> & points2d)
     vector<Mat> Ps;
     Ps.push_back(P1);
     Ps.push_back(P2x);
+
 //    Ps.push_back(P3x);
+
+    show_matches(points2d);
 
     Mat points3d;
     triangulatePoints(points2d, Ps, points3d);

@@ -50,10 +50,10 @@ load_json(string name, Mat_<double> & points)
         set_point(points, i, (double)pt.x, (double)pt.y);
     }
 
-    // namedWindow(WIN_NAME, 1);
-    // imshow(WIN_NAME, img);
+    namedWindow(WIN_NAME, 1);
+    imshow(WIN_NAME, img);
 
-    // waitKey(0);
+    waitKey(0);
 }
 
 void
