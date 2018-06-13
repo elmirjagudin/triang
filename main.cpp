@@ -1,31 +1,26 @@
 #include <stdio.h>
 #include <iostream>
 #include <iomanip>
+#include <stdlib.h>
 
-#define CERES_FOUND 1      // hack to make sure reconstruct() stuff is defined
 #include <opencv2/sfm.hpp>
 #include <opencv2/viz.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
-#include "opencv2/imgproc.hpp"
+#include <opencv2/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <stdlib.h>
 
 #include "common.h"
 
 #include "match_pts.h"
 #include "load_pts.h"
+#include "triangulate.h"
 
 
 
 using namespace std;
 using namespace cv;
 using namespace cv::sfm;
-
-const Matx33d K = Matx33d(FX, 0, CX,
-                          0, FY, CY,
-                          0, 0,  1);
-
 
 enum
 {
@@ -299,127 +294,6 @@ init_synth_points(vector<Mat> & points2d)
     }
 }
 
-void
-show_point_cloud(Mat & points3d)
-{
-//    Mat cloud(3, points3d.cols, CV_64FC3);
-    Mat cloud(points3d.cols, 1, CV_64FC3);
-
-    for (int i = 0; i < points3d.cols; i += 1)
-    {
-        auto x = points3d.at<double>(0, i);
-        auto y = points3d.at<double>(1, i);
-        auto z = points3d.at<double>(2, i);
-
-        // cout << x << " "
-        //      << y << " "
-        //      << z << endl;
-
-        cloud.at<double>(i, 0) = x;
-        cloud.at<double>(i, 1) = y;
-        cloud.at<double>(i, 2) = z;
-    }
-
-    cv::viz::Viz3d myWindow("Viz Demo");
-    auto cloud_widget = cv::viz::WCloud(cloud);
-    myWindow.showWidget( "Depth", cloud_widget );
-
-    myWindow.spin();
-}
-
-void filter_outliers(vector<Mat> & points2d, Mat & mask)
-{
-    Mat left = Mat_<double>(2, 0);
-    Mat right = Mat_<double>(2, 0);
-
-    int inliers = 0;
-    for (int i = 0; i < mask.rows; i += 1)
-    {
-        if (!mask.at<bool>(i, 0))
-        {
-            continue;
-        }
-        inliers += 1;
-
-        hconcat(left, points2d[0].col(i), left);
-        hconcat(right, points2d[1].col(i), right);
-    }
-
-    points2d.clear();
-
-    points2d.push_back(left);
-    points2d.push_back(right);
-}
-
-void
-triangulate(vector<Mat> & points2d)
-{
-    Mat mask;
-    Mat P1, P2, P3;
-    Mat R;
-    Mat rvec;
-    Mat tvec;
-
-    /* projection matrix P1 */
-    rt_vects(0, rvec, tvec);
-    Rodrigues(rvec, R);
-    projectionFromKRt(K, R, tvec, P1);
-
-    // /* projection matrix P2 */
-    // rt_vects(1, rvec, tvec);
-    // Rodrigues(rvec, R);
-    // projectionFromKRt(K, R, tvec, P2);
-
-    /* P2x from matches */
-    auto pp = Point2d(CX, CY);
-    Mat E = findEssentialMat(points2d[1].t(), points2d[0].t(),
-                             FX, pp, RANSAC, 0.999, 0.5, mask);
-
-    filter_outliers(points2d, mask);
-
-    Mat local_R, local_t;
-    recoverPose(E, points2d[1].t(), points2d[0].t(), local_R, local_t, FX, pp);
-    cout << "E " << E << endl;
-    cout << "local_R\n" << local_R << "\n local_t\n" << local_t << endl;
-    cout << "R\n" << R << endl;
-
-    Rodrigues(local_R, rvec);
-    cout << "rvec" << rvec << endl;
-
-    Mat P2x;
-    projectionFromKRt(K, local_R, local_t, P2x);
-
-//     /* P3x from matches */
-// cout << "------------- P3x ---------------\n";
-//     E = findEssentialMat(points2d[2].t(), points2d[0].t(),
-//                          500, pp, RANSAC, 0.999, 1.0, mask);
-
-//     recoverPose(E, points2d[2].t(), points2d[0].t(), local_R, local_t, 500, pp, mask);
-//     cout << "E " << E << endl;
-//     cout << "local_R\n" << local_R << "\n local_t\n" << local_t * 2 << endl;
-//     cout << "R\n" << R << endl;
-
-//     Mat P3x;
-//     projectionFromKRt(K, local_R, local_t * 2, P3x);
-
-    cout << "P1 " << P1 << endl;
-    cout << "P2 " << P2 << endl;
-    cout << "P2x " << P2x << endl;
-//    cout << "P3x " << P3x << endl;
-    vector<Mat> Ps;
-    Ps.push_back(P1);
-    Ps.push_back(P2x);
-
-//    Ps.push_back(P3x);
-
-    show_matches(points2d);
-
-    Mat points3d;
-    triangulatePoints(points2d, Ps, points3d);
-
-    show_point_cloud(points3d);
-}
-
 int
 main()
 {
@@ -433,27 +307,6 @@ main()
 //    init_points(points2d);
 //    init_synth_points(points2d);
     triangulate(points2d);
-
-    // Matx33d K = Matx33d(500, 0, 500,
-    //                     0, 500, 500,
-    //                     0, 0,  1);
-    // reconstruct(InputArrayOfArrays(points2d), Rs, Ts, K, points3d_estimated, true);
-
-
-    // for (int i = 0; i < points3d_estimated.size(); i++)
-    // {
-    //     auto p = points3d_estimated[i];
-
-    //     for (int j = 0; j < 3; j++)
-    //     {
-    //         std::cout << std::fixed;
-    //         std::cout << std::setprecision(10);
-    //         cout << p.row(j).at<double>(0) << " ";
-    //     }
-    //     cout << endl;
-    // }
-
-    // cout << K << endl;
 
     return 0;
 }

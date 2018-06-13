@@ -98,7 +98,7 @@ match_points(vector<Mat> &points2d)
 //        set_point(pts20, i, pt.x, pt.y);
     }
 
-    cout << pts0 << endl;
+//    cout << pts0 << endl;
 
 //        hconcat(left, points2d[0].col(i), left);
 //        hconcat(right, points2d[1].col(i), right);
@@ -106,47 +106,4 @@ match_points(vector<Mat> &points2d)
 
     points2d.push_back(pts0);
     points2d.push_back(pts20);
-}
-
-void
-show_matches(vector<Mat> &points2d)
-{
-    Mat img_matches;
-
-    vector<KeyPoint> key_pts_l, key_pts_r;
-    vector<DMatch> matches;
-
-    Mat left = points2d[0];
-    Mat right = points2d[1];
-
-    cout << left.cols << " < l vs r > " << right.cols << endl;
-
-    assert(left.cols == right.cols);
-    for (int i = 0; i < left.cols; i += 1)
-    {
-        auto kp = KeyPoint();
-        kp.pt.x = left.at<double>(0, i);
-        kp.pt.y = left.at<double>(1, i);
-        key_pts_l.push_back(kp);
-
-        kp = KeyPoint();
-        kp.pt.x = right.at<double>(0, i);
-        kp.pt.y = right.at<double>(1, i);
-        key_pts_r.push_back(kp);
-
-        matches.push_back(DMatch(i, i, 0));
-
-    }
-
-    drawMatches(image0, key_pts_l,
-                image20, key_pts_r,
-                matches, img_matches);
-
-    namedWindow("matches", 1);
-    imshow("matches", img_matches);
-
-    while (waitKey(0) != 27)
-    {
-        /* nop */
-    }
 }

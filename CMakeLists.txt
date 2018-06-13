@@ -10,6 +10,6 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 #link_directories(${PCL_LIBRARY_DIRS})
 #add_definitions(${PCL_DEFINITIONS})
 
-add_executable(triang main.cpp match_pts.cpp load_pts.cpp)
+add_executable(triang main.cpp triangulate.cpp show.cpp match_pts.cpp load_pts.cpp)
 target_link_libraries(triang jsoncpp ${OpenCV_LIBS})
 
