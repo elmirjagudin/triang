@@ -5,7 +5,6 @@
 #include "common.h"
 
 #include "triangulate.h"
-#include "show.h"
 
 
 using namespace std;
@@ -53,7 +52,7 @@ filter_outliers(vector<Mat> & points2d, Mat & mask)
 
 
 void
-triangulate(vector<Mat> & points2d)
+triangulate(vector<Mat> & points2d, Mat & points3d)
 {
     Mat mask;
     Mat P1, P2, P3;
@@ -91,8 +90,6 @@ triangulate(vector<Mat> & points2d)
     Ps.push_back(P1);
     Ps.push_back(P2x);
 
-    Mat points3d;
-    triangulatePoints(points2d, Ps, points3d);
 
-    show_point_cloud(points3d);
+    triangulatePoints(points2d, Ps, points3d);
 }

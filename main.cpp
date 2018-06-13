@@ -15,7 +15,7 @@
 #include "match_pts.h"
 #include "load_pts.h"
 #include "triangulate.h"
-
+#include "show.h"
 
 
 using namespace std;
@@ -298,15 +298,16 @@ int
 main()
 {
     vector<Mat> points2d;
-    vector<Mat> Rs;
-    vector<Mat> Ts;
-    vector<Mat> points3d_estimated;
+    Mat points3d;
+    Mat left_img, right_img;
 
-    match_points(points2d);
+    match_points(left_img, right_img, points2d);
 //    load_points(points2d);
 //    init_points(points2d);
 //    init_synth_points(points2d);
-    triangulate(points2d);
+    triangulate(points2d, points3d);
+
+    show_point_cloud(left_img, right_img, points2d, points3d);
 
     return 0;
 }

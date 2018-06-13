@@ -31,9 +31,6 @@ get_keypoints(Mat & frame, vector<KeyPoint> & keypoints, Mat & descriptors)
     orb->detectAndCompute(_InputArray(frame), cv::noArray(), keypoints, descriptors);
 }
 
-static Mat image0, image20;
-
-
 string image_path(string name)
 {
     return
@@ -49,13 +46,13 @@ void load_image(string name, Mat & frame)
 }
 
 void
-match_points(vector<Mat> &points2d)
+match_points(Mat & image0, Mat & image20, vector<Mat> & points2d)
 {
     vector<KeyPoint> keypoints0, keypoints20;
     Mat descriptors0, descriptors20;
 
-    load_image("img0", image0);
-    load_image("img1", image20);
+    load_image("img00", image0);
+    load_image("img02", image20);
 
     get_keypoints(image0, keypoints0, descriptors0);
     get_keypoints(image20, keypoints20, descriptors20);
