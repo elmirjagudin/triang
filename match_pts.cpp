@@ -14,11 +14,6 @@
 
 #include "match_pts.h"
 
-string image_path(string name)
-{
-    return
-       "/home/boris/Desktop/RectifiedImgs/CameraRig/pic0/" + name + ".png";
-}
 
 static void
 set_point(Mat_<double> & frame, int point_num, double x, double y)
@@ -31,12 +26,19 @@ set_point(Mat_<double> & frame, int point_num, double x, double y)
 static void
 get_keypoints(Mat & frame, vector<KeyPoint> & keypoints, Mat & descriptors)
 {
-    static auto orb = ORB::create();
+    static auto orb = ORB::create(2048);
 
     orb->detectAndCompute(_InputArray(frame), cv::noArray(), keypoints, descriptors);
 }
 
 static Mat image0, image20;
+
+
+string image_path(string name)
+{
+    return
+       "/home/boris/Desktop/RectifiedImgs/pad/stair0/" + name + ".jpg";
+}
 
 void load_image(string name, Mat & frame)
 {
@@ -49,12 +51,11 @@ void load_image(string name, Mat & frame)
 void
 match_points(vector<Mat> &points2d)
 {
-    auto orb = ORB::create(2000);
     vector<KeyPoint> keypoints0, keypoints20;
     Mat descriptors0, descriptors20;
 
     load_image("img0", image0);
-    load_image("img16", image20);
+    load_image("img1", image20);
 
     get_keypoints(image0, keypoints0, descriptors0);
     get_keypoints(image20, keypoints20, descriptors20);
